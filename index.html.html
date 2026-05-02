@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P&L Отчет - Кофейня "У дороги" | AIPL</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #6F4E37;
+            --secondary: #A0522D;
+            --success: #2E7D32;
+            --warning: #ED6C02;
+            --error: #C62828;
+            --bg: #FFF8F0;
+            --card: #FFFFFF;
+            --text: #2C1810;
+            --text-light: #6D4C41;
+            --border: #E8D5C4;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 20px;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+        
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 24px;
+            border-radius: 16px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            box-shadow: 0 4px 12px rgba(111,78,55,0.15);
+        }
+        .header h1 { font-size: 1.6rem; margin-bottom: 4px; }
+        .header-sub { opacity: 0.9; font-size: 0.95rem; }
+        .header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: 0.2s;
+            font-size: 0.9rem;
+        }
+        .btn-primary { background: white; color: var(--primary); }
+        .btn-primary:hover { background: #f8f8f8; }
+        .btn-outline { background: transparent; border: 2px solid white; color: white; }
+        .btn-outline:hover { background: rgba(255,255,255,0.15); }
+        
+        /* KPI Cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .kpi-card {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border-left: 4px solid var(--primary);
+        }
+        .kpi-card.warning { border-left-color: var(--warning); }
+        .kpi-card.error { border-left-color: var(--error); }
+        .kpi-card.success { border-left-color: var(--success); }
+        .kpi-label { font-size: 0.85rem; color: var(--text-light); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .kpi-value { font-size: 1.7rem; font-weight: 700; }
+        .kpi-delta { font-size: 0.85rem; margin-top: 6px; }
+        .delta-up { color: var(--success); }
+        .delta-down { color: var(--error); }
+        
+        /* Sections & Tables */
+        .section {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .section-title {
+            font-size: 1.25rem;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 10px;
+        }
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        .badge-warning { background: #FFF3E0; color: var(--warning); }
+        
+        .pnl-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+        }
+        .pnl-table th {
+            text-align: left;
+            padding: 12px 16px;
+            background: #F9F3ED;
+            font-weight: 600;
+            border-bottom: 2px solid var(--border);
+            color: var(--text-light);
+        }
+        .pnl-table td {
+            padding: 10px 16px;
+            border-bottom: 1px solid #f5f5f5;
+        }
+        .pnl-table tr:hover { background: #FFFDFB; }
+        .indent-1 { padding-left: 32px; color: #555; }
+        .indent-2 { padding-left: 52px; font-size: 0.9em; color: #777; }
+        .total-row { font-weight: 700; background: #FDF6F0; }
+        .negative { color: var(--error); }
+        .positive { color: var(--success); }
+        .warning-text { color: var(--warning); font-weight: 600; }
+        
+        /* Insights & Recs */
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .insight-card {
+            padding: 16px;
+            border-radius: 10px;
+            background: #FFF9F5;
+            border-left: 4px solid var(--secondary);
+        }
+        .insight-card.critical { border-left-color: var(--error); background: #FFF5F5; }
+        .insight-card.positive { border-left-color: var(--success); background: #F0FFF4; }
+        .insight-title { font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        
+        .rec-list ol { padding-left: 20px; margin-top: 12px; }
+        .rec-list li { margin-bottom: 10px; line-height: 1.5; }
+        .priority-high { color: var(--error); font-weight: 700; }
+        .priority-med { color: var(--warning); font-weight: 600; }
+        
+        /* Chart */
+        .chart-wrapper {
+            position: relative;
+            height: 320px;
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        /* Metrics & Footer */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            background: #F9F3ED;
+            padding: 16px;
+            border-radius: 10px;
+        }
+        .footer-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        .footer-note {
+            margin-top: 20px;
+            font-size: 0.85rem;
+            color: #888;
+            text-align: center;
+        }
+
+        @media (max-width: 600px) {
+            .header { flex-direction: column; text-align: center; }
+            .pnl-table { font-size: 0.85rem; }
+            .pnl-table th, .pnl-table td { padding: 8px 10px; }
+            .chart-wrapper { height: 280px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- Header -->
+    <div class="header">
+        <div>
+            <h1>☕ Кофейня "У дороги"</h1>
+            <div class="header-sub">ИП • Саратов • УСН 6% • 8 сотрудников • Октябрь 2024</div>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-outline" onclick="alert('Функция навигации будет доступна при подключении к базе')">← Пред.</button>
+            <button class="btn btn-primary" onclick="window.print()">🖨️ Печать / PDF</button>
+            <button class="btn btn-outline">След. →</button>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+        <div class="kpi-card success">
+            <div class="kpi-label">💰 Выручка</div>
+            <div class="kpi-value">600 000 ₽</div>
+            <div class="kpi-delta delta-up">↑ 12% к прошлому месяцу</div>
+        </div>
+        <div class="kpi-card error">
+            <div class="kpi-label">✅ Чистая прибыль</div>
+            <div class="kpi-value negative">-311 000 ₽</div>
+            <div class="kpi-delta delta-down">⚠️ Убыток</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">📊 Валовая маржа</div>
+            <div class="kpi-value">30.8%</div>
+            <div class="kpi-delta">В норме для общепита ✅</div>
+        </div>
+        <div class="kpi-card warning">
+            <div class="kpi-label">🎯 Точка безубыточности</div>
+            <div class="kpi-value">830 000 ₽</div>
+            <div class="kpi-delta delta-down">Не хватает 230 000 ₽</div>
+        </div>
+    </div>
+
+    <!-- P&L Table -->
+    <div class="section">
+        <div class="section-title">📊 Отчет о прибылях и убытках (P&L) <span class="status-badge badge-warning">Предварительный</span></div>
+        <table class="pnl-table">
+            <thead>
+                <tr>
+                    <th style="width: 55%;">Статья</th>
+                    <th style="width: 25%; text-align: right;">Сумма (₽)</th>
+                    <th style="width: 20%; text-align: right;">% от выручки</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="total-row">
+                    <td>▶ 📈 <strong>ДОХОДЫ</strong></td>
+                    <td style="text-align: right;"><strong>600 000</strong></td>
+                    <td style="text-align: right;"><strong>100%</strong></td>
+                </tr>
+                <tr><td class="indent-1">├─ Кофе и напитки</td><td style="text-align: right;">300 000</td><td style="text-align: right;">50%</td></tr>
+                <tr><td class="indent-1">├─ Выпечка</td><td style="text-align: right;">180 000</td><td style="text-align: right;">30%</td></tr>
+                <tr><td class="indent-1">└─ Торты на заказ</td><td style="text-align: right;">120 000</td><td style="text-align: right;">20%</td></tr>
+                
+                <tr class="total-row">
+                    <td>▶ 📦 <strong>СЕБЕСТОИМОСТЬ (COGS)</strong></td>
+                    <td class="negative" style="text-align: right;"><strong>-415 000</strong></td>
+                    <td class="negative" style="text-align: right;"><strong>69.2%</strong></td>
+                </tr>
+                <tr><td class="indent-1">├─ Ингредиенты</td><td class="negative" style="text-align: right;">-180 000</td><td class="negative" style="text-align: right;">30%</td></tr>
+                <tr><td class="indent-1">├─ Упаковка</td><td class="negative" style="text-align: right;">-25 000</td><td class="negative" style="text-align: right;">4.2%</td></tr>
+                <tr><td class="indent-1">├─ ФОТ кухни (бариста, пекарь, кондитер)</td><td class="negative" style="text-align: right;">-210 000</td><td class="negative" style="text-align: right;">35%</td></tr>
+                
+                <tr class="total-row" style="background: #E8F5E9;">
+                    <td>💰 <strong>ВАЛОВАЯ ПРИБЫЛЬ</strong></td>
+                    <td class="positive" style="text-align: right;"><strong>185 000</strong></td>
+                    <td class="positive" style="text-align: right;"><strong>30.8%</strong></td>
+                </tr>
+                
+                <tr class="total-row">
+                    <td>▶ 🏢 <strong>ОПЕРАЦИОННЫЕ РАСХОДЫ (OPEX)</strong></td>
+                    <td class="negative" style="text-align: right;"><strong>-460 000</strong></td>
+                    <td class="negative" style="text-align: right;"><strong>76.7%</strong></td>
+                </tr>
+                <tr><td class="indent-1">├─ Аренда</td><td class="negative" style="text-align: right;">-80 000</td><td class="negative" style="text-align: right;">13.3%</td></tr>
+                <tr><td class="indent-1">├─ Коммунальные услуги</td><td class="negative" style="text-align: right;">-30 000</td><td class="negative" style="text-align: right;">5%</td></tr>
+                <tr><td class="indent-1 warning-text">└─ ФОТ администраторов</td><td class="negative warning-text" style="text-align: right;">-350 000</td><td class="negative warning-text" style="text-align: right;">58.3% ⚠️</td></tr>
+                
+                <tr class="total-row" style="background: #FFF3E0;">
+                    <td>📈 <strong>ОПЕРАЦИОННАЯ ПРИБЫЛЬ (EBIT)</strong></td>
+                    <td class="negative" style="text-align: right;"><strong>-275 000</strong></td>
+                    <td class="negative" style="text-align: right;"><strong>-45.8%</strong></td>
+                </tr>
+                
+                <tr><td>💸 Прочие расходы (оборудование/CAPEX)</td><td class="negative" style="text-align: right;">-250 000</td><td style="text-align: right;">-</td></tr>
+                <tr><td>🧾 Налог УСН 6%</td><td class="negative" style="text-align: right;">-36 000</td><td style="text-align: right;">6%</td></tr>
+                
+                <tr class="total-row" style="background: #FFEBEE; font-size: 1.05rem;">
+                    <td>✅ <strong>ЧИСТАЯ ПРИБЫЛЬ</strong></td>
+                    <td class="negative" style="text-align: right;"><strong>-311 000</strong></td>
+                    <td class="negative" style="text-align: right;"><strong>-51.8%</strong></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Chart -->
+    <div class="section">
+        <div class="section-title">📊 Структура доходов и расходов</div>
+        <div class="chart-wrapper">
+            <canvas id="pnlChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Insights & Recommendations -->
+    <div class="section">
+        <div class="section-title">💡 Инсайты и рекомендации</div>
+        <div class="insights-grid">
+            <div class="insight-card critical">
+                <div class="insight-title">⚠️ Критическая ситуация</div>
+                <p>Бизнес убыточен: чистый убыток <strong>311 000 ₽</strong> за октябрь. Валовая прибыль есть (185 000 ₽), но операционные расходы полностью её поглощают.</p>
+            </div>
+            <div class="insight-card positive">
+                <div class="insight-title">✅ Хорошая новость</div>
+                <p>Валовая маржа <strong>30.8%</strong> находится в пределах нормы для кофейни (25-35%). Ценообразование и закупки работают корректно.</p>
+            </div>
+            <div class="insight-card critical">
+                <div class="insight-title">💡 Главная проблема</div>
+                <p>ФОТ администраторов составляет <strong>58.3%</strong> от выручки (350 000 ₽). Это почти в 2 раза выше отраслевой нормы (25-35%).</p>
+            </div>
+        </div>
+
+        <div class="rec-list">
+            <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 8px;">🎯 Рекомендации (по приоритету)</div>
+            <ol>
+                <li class="priority-high">Срочно: Пересмотрите график администраторов. Сократите часы в низкий трафик — экономия до <strong>50 000 ₽/мес</strong></li>
+                <li class="priority-high">Важно: Введите KPI для админов: привяжите часть зарплаты к выручке смены</li>
+                <li class="priority-med">Тест: Повысьте цены на топовые позиции на 10% → +60 000 ₽ выручки без роста затрат</li>
+                <li class="priority-med">План: Увеличьте средний чек с 400 ₽ до 500 ₽ через апселлинг (кофе + выпечка)</li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- Quick Metrics -->
+    <div class="section">
+        <div class="section-title">📊 Быстрые метрики</div>
+        <div class="metrics-grid">
+            <div><strong>👥 Выручка/сотр:</strong> 75 000 ₽</div>
+            <div><strong>📦 Средний чек:</strong> 400 ₽</div>
+            <div><strong>☕ Чашек/день:</strong> ~25</div>
+            <div><strong>💰 Точка безубыт.:</strong> 830 000 ₽</div>
+            <div><strong>📈 Запас прочности:</strong> <span class="negative">-28% ⚠️</span></div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer-actions">
+        <button class="btn btn-primary">📋 Детализация по дням</button>
+        <button class="btn btn-primary">📈 Сравнить с периодом</button>
+        <button class="btn btn-outline" style="border: 2px solid var(--primary); color: var(--primary);">🤔 Задать вопрос ИИ</button>
+    </div>
+    <div class="footer-note">
+        Отчет сгенерирован AIPL • Период: 01.10.2024 – 31.10.2024 • Данные: оценочные • Налог УСН рассчитан автоматически
+    </div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('pnlChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Кофе', 'Выпечка', 'Торты', 'Ингредиенты', 'Упаковка', 'ФОТ кухни', 'Аренда', 'ФОТ админ', 'Налоги/Прочее'],
+            datasets: [{
+                data: [300, 180, 120, 180, 25, 210, 80, 350, 36],
+                backgroundColor: [
+                    '#6F4E37', '#A0522D', '#D2691E',
+                    '#FFB74D', '#FFCC80', '#FFAB91',
+                    '#8D6E63', '#EF9A9A', '#BDBDBD'
+                ],
+                borderWidth: 2,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { 
+                    position: 'right', 
+                    labels: { boxWidth: 12, font: { size: 11 }, padding: 15 } 
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let val = context.parsed * 1000;
+                            return context.label + ': ' + val.toLocaleString('ru-RU') + ' ₽';
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+
+</body>
+</html>
